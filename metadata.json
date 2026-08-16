@@ -1,0 +1,8 @@
+{
+  "name": "Heritage of Excellence Abuja - Attendance & Payroll",
+  "description": "Smart QR-code attendance management system for students and staff with real-time parent notifications, mobile push alerts, executive leadership analytics, and integrated Nigerian payroll management.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
