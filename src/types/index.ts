@@ -168,3 +168,41 @@ export interface NotificationTemplate {
   body: string;
   variables: string[];
 }
+
+export interface SchoolHouse {
+  name: string;
+  color: string;
+  badgeColor: string;
+}
+
+export interface SchoolSettings {
+  schoolName: string;
+  shortName: string;
+  logoUrl?: string; // Base64 data URL or web image URL for the official school logo
+  motto: string;
+  academicSession: string;
+  currentTerm: string;
+  campusAddress: string;
+  stateCity: string;
+  contactEmail: string;
+  contactPhone: string;
+  website: string;
+  principalName: string;
+  principalTitle: string;
+  bursarName: string;
+  bursarTitle: string;
+  morningCutoffTime: string; // e.g. "07:45"
+  dismissalTime: string; // e.g. "14:30"
+  lateGracePeriodMinutes: number;
+  requireTemperatureCheck: boolean;
+  autoSendPushOnScan: boolean;
+  autoSendSmsOnLate: boolean;
+  gateLocations: string[];
+  statutoryPensionRate: number; // e.g. 8 (for 8%)
+  currencySymbol: string; // "₦"
+  workingDaysPerMonth: number; // 22
+  latePenaltyPerOccurrence: number; // 3500
+  unexcusedAbsencePenaltyDaily: number; // 15000
+  disbursementBankDefault: string;
+  houses: SchoolHouse[];
+}

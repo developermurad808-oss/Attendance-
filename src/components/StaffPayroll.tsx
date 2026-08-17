@@ -13,14 +13,17 @@ import {
   Sparkles, 
   AlertCircle,
   TrendingDown,
-  ShieldCheck
+  ShieldCheck,
+  FileSpreadsheet
 } from 'lucide-react';
-import { PayrollRecord, Staff } from '../types';
-import { formatNaira, downloadCSV } from '../utils/audio';
+import { PayrollRecord, Staff, SchoolSettings } from '../types';
+import { formatNaira } from '../utils/audio';
+import { exportPayrollRecordsToCSV } from '../utils/exportUtils';
 
 interface StaffPayrollProps {
   payrollRecords: PayrollRecord[];
   staff: Staff[];
+  schoolSettings?: SchoolSettings;
   onDisbursePayroll: () => void;
   onSendSinglePayslip: (record: PayrollRecord) => void;
   onSendAllPayslips: () => void;
@@ -29,6 +32,7 @@ interface StaffPayrollProps {
 export const StaffPayroll: React.FC<StaffPayrollProps> = ({
   payrollRecords,
   staff,
+  schoolSettings,
   onDisbursePayroll,
   onSendSinglePayslip,
   onSendAllPayslips,
@@ -36,6 +40,7 @@ export const StaffPayroll: React.FC<StaffPayrollProps> = ({
   const [selectedMonth, setSelectedMonth] = useState<string>('August 2026');
   const [activePayslip, setActivePayslip] = useState<PayrollRecord | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [exportNotice, setExportNotice] = useState<string | null>(null);
 
   const totalGross = payrollRecords.reduce((sum, p) => sum + p.grossPay, 0);
   const totalDeductions = payrollRecords.reduce((sum, p) => sum + p.totalDeductions, 0);
@@ -50,16 +55,12 @@ export const StaffPayroll: React.FC<StaffPayrollProps> = ({
   );
 
   const handleExportBankDisbursement = () => {
-    const bankData = payrollRecords.map((p) => ({
-      BeneficiaryName: p.staffName,
-      EmployeeID: p.employeeId,
-      BankName: p.bankName,
-      AccountNumber: p.accountNumber,
-      AmountNaira: p.netPay,
-      Narration: `Heritage Abuja Salary ${selectedMonth}`,
-      PaymentStatus: p.paymentStatus,
-    }));
-    downloadCSV(`Heritage_Abuja_Bank_Disbursement_Schedule_${selectedMonth.replace(/\s+/g, '_')}`, bankData);
+    const count = exportPayrollRecordsToCSV(payrollRecords, {
+      monthFilter: selectedMonth,
+      filenamePrefix: `${schoolSettings?.shortName || 'School'}_Payroll_Bank_Schedule`,
+    });
+    setExportNotice(`Exported ${count} staff payroll records to CSV for bank disbursement and secure offline storage.`);
+    setTimeout(() => setExportNotice(null), 5000);
   };
 
   const handlePrintPayslip = () => {
@@ -116,6 +117,13 @@ export const StaffPayroll: React.FC<StaffPayrollProps> = ({
           </button>
         </div>
       </div>
+
+      {exportNotice && (
+        <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center gap-2 text-emerald-900 text-xs font-bold animate-fadeIn shadow-xs">
+          <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+          <span>{exportNotice}</span>
+        </div>
+      )}
 
       {/* Financial Overview KPI Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -256,15 +264,25 @@ export const StaffPayroll: React.FC<StaffPayrollProps> = ({
             {/* Header / Letterhead */}
             <div className="flex items-start justify-between border-b border-slate-200 pb-5">
               <div className="flex items-center gap-3.5">
-                <div className="w-12 h-12 rounded-2xl bg-indigo-900 text-amber-400 flex items-center justify-center font-serif font-black text-2xl shadow-sm border border-indigo-800">
-                  HE
-                </div>
+                {schoolSettings?.logoUrl ? (
+                  <div className="w-12 h-12 rounded-2xl bg-indigo-950 p-1 flex items-center justify-center shadow-sm border border-indigo-800 shrink-0 overflow-hidden">
+                    <img
+                      src={schoolSettings.logoUrl}
+                      alt="School Crest"
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                ) : (
+                  <div className="w-12 h-12 rounded-2xl bg-indigo-900 text-amber-400 flex items-center justify-center font-serif font-black text-2xl shadow-sm border border-indigo-800 shrink-0">
+                    {schoolSettings?.shortName ? schoolSettings.shortName.slice(0, 3) : 'HEA'}
+                  </div>
+                )}
                 <div>
                   <h3 className="font-serif font-black text-lg text-slate-900">
-                    Heritage of Excellence Academy Abuja
+                    {schoolSettings?.schoolName || 'Heritage of Excellence Academy Abuja'}
                   </h3>
                   <p className="text-xs text-slate-500 font-medium">
-                    Plot 410, Maitama District, Abuja FCT • Official Confidential Payslip
+                    {schoolSettings?.campusAddress || 'Plot 410, Maitama District, Abuja FCT'} • Official Confidential Payslip
                   </p>
                 </div>
               </div>
@@ -406,15 +424,15 @@ export const StaffPayroll: React.FC<StaffPayrollProps> = ({
             {/* Signatures & Seal */}
             <div className="grid grid-cols-2 gap-8 pt-4 border-t border-slate-200 text-[11px] text-slate-500">
               <div>
-                <p className="font-bold text-slate-900">Alh. Ibrahim Dantata</p>
-                <p>Chief Bursar & Financial Controller</p>
+                <p className="font-bold text-slate-900">{schoolSettings?.bursarName || 'Alh. Ibrahim Dantata'}</p>
+                <p>{schoolSettings?.bursarTitle || 'Chief Bursar & Financial Controller'}</p>
                 <div className="mt-4 pt-1 border-t border-slate-300 w-32 font-mono text-[9px] text-slate-600">
                   Bursary Stamp (Verified)
                 </div>
               </div>
               <div className="text-right">
-                <p className="font-bold text-slate-900">Dr. Mrs. Funmilayo Adeleke</p>
-                <p>Executive Principal & Director</p>
+                <p className="font-bold text-slate-900">{schoolSettings?.principalName || 'Dr. Mrs. Funmilayo Adeleke'}</p>
+                <p>{schoolSettings?.principalTitle || 'Executive Principal & Director'}</p>
                 <div className="mt-4 pt-1 border-t border-slate-300 w-32 ml-auto font-mono text-[9px] text-slate-600">
                   Executive Signoff
                 </div>

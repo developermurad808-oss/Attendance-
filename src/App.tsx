@@ -8,6 +8,8 @@ import { StaffAttendance } from './components/StaffAttendance';
 import { StaffPayroll } from './components/StaffPayroll';
 import { ParentNotificationCenter } from './components/ParentNotificationCenter';
 import { IDCardStudio } from './components/IDCardStudio';
+import { DataExportCenter } from './components/DataExportCenter';
+import { SchoolSettingsView } from './components/SchoolSettings';
 
 import { 
   Student, 
@@ -16,7 +18,8 @@ import {
   LeaveRequest, 
   PayrollRecord, 
   NotificationLog, 
-  NotificationTemplate 
+  NotificationTemplate,
+  SchoolSettings
 } from './types';
 
 import { 
@@ -29,10 +32,26 @@ import {
   generatePayrollRecords 
 } from './data/mockData';
 
+import { DEFAULT_SCHOOL_SETTINGS } from './data/defaultSettings';
+import { SystemBackupData } from './utils/exportUtils';
 import { soundFx } from './utils/audio';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<string>('dashboard');
+  
+  // School Settings with LocalStorage persistence
+  const [schoolSettings, setSchoolSettings] = useState<SchoolSettings>(() => {
+    try {
+      const saved = localStorage.getItem('heritage_abuja_school_settings');
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch {
+      // fallback
+    }
+    return DEFAULT_SCHOOL_SETTINGS;
+  });
+
   const [students, setStudents] = useState<Student[]>(INITIAL_STUDENTS);
   const [staff, setStaff] = useState<Staff[]>(INITIAL_STAFF);
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>(generateInitialAttendance());
@@ -42,9 +61,59 @@ export default function App() {
   const [templates] = useState<NotificationTemplate[]>(INITIAL_NOTIFICATION_TEMPLATES);
 
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
-  const [gateLocation, setGateLocation] = useState<string>('Main Gate (Maitama Campus)');
+  const [gateLocation, setGateLocation] = useState<string>(
+    schoolSettings.gateLocations[0] || 'Main Gate (Maitama Campus)'
+  );
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [isSimulating, setIsSimulating] = useState<boolean>(false);
+
+  // Sync settings changes to localStorage
+  const handleSaveSchoolSettings = (updated: SchoolSettings) => {
+    setSchoolSettings(updated);
+    try {
+      localStorage.setItem('heritage_abuja_school_settings', JSON.stringify(updated));
+    } catch (e) {
+      console.error('Failed to save settings to localStorage', e);
+    }
+    if (!updated.gateLocations.includes(gateLocation) && updated.gateLocations.length > 0) {
+      setGateLocation(updated.gateLocations[0]);
+    }
+  };
+
+  const handleResetSchoolSettings = () => {
+    setSchoolSettings(DEFAULT_SCHOOL_SETTINGS);
+    try {
+      localStorage.removeItem('heritage_abuja_school_settings');
+    } catch (e) {
+      console.error(e);
+    }
+    setGateLocation(DEFAULT_SCHOOL_SETTINGS.gateLocations[0]);
+  };
+
+  // Restore Complete System from JSON Backup
+  const handleRestoreBackup = (backupData: SystemBackupData) => {
+    if (backupData.schoolSettings) {
+      handleSaveSchoolSettings(backupData.schoolSettings);
+    }
+    if (backupData.students && Array.isArray(backupData.students)) {
+      setStudents(backupData.students);
+    }
+    if (backupData.staff && Array.isArray(backupData.staff)) {
+      setStaff(backupData.staff);
+    }
+    if (backupData.attendanceRecords && Array.isArray(backupData.attendanceRecords)) {
+      setAttendanceRecords(backupData.attendanceRecords);
+    }
+    if (backupData.payrollRecords && Array.isArray(backupData.payrollRecords)) {
+      setPayrollRecords(backupData.payrollRecords);
+    }
+    if (backupData.leaveRequests && Array.isArray(backupData.leaveRequests)) {
+      setLeaveRequests(backupData.leaveRequests);
+    }
+    if (backupData.notificationLogs && Array.isArray(backupData.notificationLogs)) {
+      setNotificationLogs(backupData.notificationLogs);
+    }
+  };
 
   // Record Attendance Handler
   const handleRecordAttendance = useCallback((record: AttendanceRecord) => {
@@ -393,6 +462,7 @@ export default function App() {
         gateLocation={gateLocation}
         setGateLocation={setGateLocation}
         unreadNotificationsCount={notificationLogs.filter((l) => l.status === 'Delivered').length}
+        schoolSettings={schoolSettings}
       />
 
       {/* Main Container */}
@@ -404,6 +474,7 @@ export default function App() {
             attendanceRecords={attendanceRecords}
             payrollRecords={payrollRecords}
             notificationLogs={notificationLogs}
+            schoolSettings={schoolSettings}
             onTriggerDirectNotification={handleTriggerDirectNotification}
             onNavigateTab={setActiveTab}
           />
@@ -413,6 +484,7 @@ export default function App() {
           <QRScannerKiosk
             students={students}
             staff={staff}
+            schoolSettings={schoolSettings}
             onRecordAttendance={handleRecordAttendance}
             gateLocation={gateLocation}
             soundEnabled={soundEnabled}
@@ -425,6 +497,7 @@ export default function App() {
           <StudentAttendance
             students={students}
             attendanceRecords={attendanceRecords}
+            schoolSettings={schoolSettings}
             onAddStudent={handleAddStudent}
             onUpdateAttendanceStatus={handleUpdateAttendanceStatus}
             onSendBatchAbsenceNotice={handleSendBatchAbsenceNotice}
@@ -448,6 +521,7 @@ export default function App() {
           <StaffPayroll
             payrollRecords={payrollRecords}
             staff={staff}
+            schoolSettings={schoolSettings}
             onDisbursePayroll={handleDisbursePayroll}
             onSendSinglePayslip={handleSendSinglePayslip}
             onSendAllPayslips={handleSendAllPayslips}
@@ -468,6 +542,28 @@ export default function App() {
           <IDCardStudio
             students={students}
             staff={staff}
+            schoolSettings={schoolSettings}
+          />
+        )}
+
+        {activeTab === 'export' && (
+          <DataExportCenter
+            schoolSettings={schoolSettings}
+            students={students}
+            staff={staff}
+            attendanceRecords={attendanceRecords}
+            payrollRecords={payrollRecords}
+            leaveRequests={leaveRequests}
+            notificationLogs={notificationLogs}
+            onRestoreBackup={handleRestoreBackup}
+          />
+        )}
+
+        {activeTab === 'settings' && (
+          <SchoolSettingsView
+            settings={schoolSettings}
+            onSaveSettings={handleSaveSchoolSettings}
+            onResetSettings={handleResetSchoolSettings}
           />
         )}
       </main>
@@ -476,12 +572,12 @@ export default function App() {
       <footer className="border-t border-slate-200 bg-white py-4 px-6 text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-2 print:hidden shadow-xs">
         <div className="flex items-center gap-2">
           <div className="w-5 h-5 rounded bg-indigo-800 text-amber-400 font-serif font-black flex items-center justify-center text-[10px]">
-            H
+            {schoolSettings.shortName ? schoolSettings.shortName.charAt(0) : 'H'}
           </div>
-          <span className="font-medium text-slate-700">Heritage of Excellence Abuja • Attendance & Payroll System</span>
+          <span className="font-medium text-slate-700">{schoolSettings.schoolName} • Attendance & Payroll System</span>
         </div>
-        <div>
-          <span>Plot 410, Maitama District, Abuja FCT • Motto: <span className="font-semibold text-indigo-900">&ldquo;Virtus et Scientia&rdquo;</span></span>
+        <div className="text-right">
+          <span>{schoolSettings.campusAddress} • Motto: <span className="font-semibold text-indigo-900">&ldquo;{schoolSettings.motto}&rdquo;</span></span>
         </div>
       </footer>
     </div>

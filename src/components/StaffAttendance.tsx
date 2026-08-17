@@ -13,9 +13,13 @@ import {
   X, 
   Award,
   DollarSign,
-  AlertCircle
+  AlertCircle,
+  BarChart3,
+  TrendingUp,
+  Activity
 } from 'lucide-react';
 import { Staff, AttendanceRecord, LeaveRequest } from '../types';
+import { StaffLeaveAttendanceBarChart } from './StaffLeaveAttendanceBarChart';
 
 interface StaffAttendanceProps {
   staff: Staff[];
@@ -36,7 +40,7 @@ export const StaffAttendance: React.FC<StaffAttendanceProps> = ({
   onRejectLeave,
   onRequestLeave,
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'attendance' | 'leaves'>('attendance');
+  const [activeSubTab, setActiveSubTab] = useState<'attendance' | 'leaves' | 'analytics'>('attendance');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedDept, setSelectedDept] = useState<string>('all');
   const [showAddStaffModal, setShowAddStaffModal] = useState<boolean>(false);
@@ -208,8 +212,8 @@ export const StaffAttendance: React.FC<StaffAttendanceProps> = ({
         </div>
       </div>
 
-      {/* Sub tabs: Attendance roster vs Leave applications */}
-      <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
+      {/* Sub tabs: Attendance roster vs Leave applications vs HR Bar Chart Trends */}
+      <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 pb-2">
         <button
           onClick={() => setActiveSubTab('attendance')}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
@@ -234,6 +238,17 @@ export const StaffAttendance: React.FC<StaffAttendanceProps> = ({
               {leaveRequests.filter((l) => l.status === 'Pending').length} Pending
             </span>
           )}
+        </button>
+        <button
+          onClick={() => setActiveSubTab('analytics')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+            activeSubTab === 'analytics'
+              ? 'bg-indigo-900 text-white shadow-xs'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+          }`}
+        >
+          <BarChart3 className="w-3.5 h-3.5 text-amber-400" />
+          <span>Monthly Leave vs Attendance Patterns (Bar Chart)</span>
         </button>
       </div>
 
@@ -353,9 +368,33 @@ export const StaffAttendance: React.FC<StaffAttendanceProps> = ({
             </div>
           </div>
         </div>
-      ) : (
+      ) : activeSubTab === 'leaves' ? (
         /* Leaves Sub Tab */
         <div className="space-y-4">
+          {/* Quick Bar Chart Preview Banner */}
+          <div className="p-4 bg-indigo-50/60 border border-indigo-100 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-indigo-900 text-white">
+                <BarChart3 className="w-5 h-5 text-amber-400" />
+              </div>
+              <div>
+                <h4 className="font-bold text-slate-900 text-xs">
+                  HR Staffing Availability & Leave Trends Intelligence
+                </h4>
+                <p className="text-[11px] text-slate-600">
+                  Compare monthly total leave requests against historical attendance patterns across all 12 academic months.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setActiveSubTab('analytics')}
+              className="px-3.5 py-1.5 bg-indigo-900 hover:bg-indigo-800 text-white font-bold text-xs rounded-xl transition-colors shrink-0 shadow-xs flex items-center gap-1.5"
+            >
+              <Activity className="w-3.5 h-3.5 text-amber-400" />
+              <span>Open Full Bar Chart</span>
+            </button>
+          </div>
+
           <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
             <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
               <h3 className="font-bold text-slate-900 text-sm">Official Leave Applications & Approvals</h3>
@@ -424,6 +463,14 @@ export const StaffAttendance: React.FC<StaffAttendanceProps> = ({
             </div>
           </div>
         </div>
+      ) : (
+        /* Bar Chart Analytics Sub Tab */
+        <StaffLeaveAttendanceBarChart
+          staff={staff}
+          attendanceRecords={attendanceRecords}
+          leaveRequests={leaveRequests}
+          onApplyLeaveClick={() => setShowApplyLeaveModal(true)}
+        />
       )}
 
       {/* Apply Leave Modal */}

@@ -12,8 +12,11 @@ import {
   Volume2, 
   VolumeX,
   Clock,
-  Building2
+  Building2,
+  HardDrive,
+  Settings
 } from 'lucide-react';
+import { SchoolSettings } from '../types';
 
 interface NavbarProps {
   activeTab: string;
@@ -26,6 +29,7 @@ interface NavbarProps {
   gateLocation: string;
   setGateLocation: (loc: string) => void;
   unreadNotificationsCount: number;
+  schoolSettings: SchoolSettings;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -39,6 +43,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   gateLocation,
   setGateLocation,
   unreadNotificationsCount,
+  schoolSettings,
 }) => {
   const [currentTime, setCurrentTime] = React.useState<string>('');
 
@@ -67,6 +72,8 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'payroll', label: 'Payroll (₦)', icon: CreditCard },
     { id: 'notifications', label: 'Parent Comms', icon: BellRing, badge: unreadNotificationsCount },
     { id: 'id-cards', label: 'ID Badges', icon: IdCard },
+    { id: 'export', label: 'Data Export', icon: HardDrive },
+    { id: 'settings', label: 'School Settings', icon: Settings },
   ];
 
   return (
@@ -76,12 +83,12 @@ export const Navbar: React.FC<NavbarProps> = ({
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-1.5 font-semibold text-amber-400">
             <Building2 className="w-3.5 h-3.5" />
-            <span>Maitama Campus, Abuja (FCT Nigeria)</span>
+            <span className="truncate max-w-xs sm:max-w-md">{schoolSettings.campusAddress}</span>
           </div>
           <span className="hidden sm:inline text-indigo-700">|</span>
           <div className="hidden sm:flex items-center gap-1.5 text-indigo-100 font-medium">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span>Live Gate Synchronization: Active</span>
+            <span>Session: {schoolSettings.academicSession}</span>
           </div>
         </div>
 
@@ -93,12 +100,13 @@ export const Navbar: React.FC<NavbarProps> = ({
           <select
             value={gateLocation}
             onChange={(e) => setGateLocation(e.target.value)}
-            className="bg-indigo-900 text-indigo-100 border border-indigo-700 rounded-lg px-2.5 py-0.5 text-xs font-medium focus:outline-none focus:border-amber-400"
+            className="bg-indigo-900 text-indigo-100 border border-indigo-700 rounded-lg px-2.5 py-0.5 text-xs font-medium focus:outline-none focus:border-amber-400 max-w-[200px]"
           >
-            <option value="Main Gate (Maitama Campus)">Main Gate (Maitama)</option>
-            <option value="Junior Wing Gate">Junior Wing Gate</option>
-            <option value="Staff Executive Gate">Staff Executive Gate</option>
-            <option value="Hostel & Bus Turnstile">Hostel & Bus Turnstile</option>
+            {schoolSettings.gateLocations.map((loc) => (
+              <option key={loc} value={loc}>
+                {loc}
+              </option>
+            ))}
           </select>
         </div>
       </div>
@@ -106,17 +114,30 @@ export const Navbar: React.FC<NavbarProps> = ({
       {/* Main Bar complying with Top Bar Contract */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between h-16 gap-3">
         {/* Brand Zone: 1 single element, no secondary subheadings underneath */}
-        <div className="flex items-center gap-3 shrink-0">
-          <div className="w-10 h-10 bg-amber-400 rounded-xl flex items-center justify-center font-black text-indigo-950 text-xl shadow-sm tracking-tight">
-            H
-          </div>
-          <span className="font-bold text-white text-base sm:text-lg tracking-tight uppercase whitespace-nowrap">
-            Heritage of Excellence <span className="text-indigo-950 font-sans font-black text-[10px] px-2 py-0.5 rounded-full bg-amber-400 uppercase tracking-widest ml-1 shadow-xs">Abuja</span>
+        <div className="flex items-center gap-2.5 shrink-0">
+          {schoolSettings.logoUrl ? (
+            <div className="w-10 h-10 rounded-xl bg-white/10 p-0.5 flex items-center justify-center border border-white/20 shadow-sm shrink-0 overflow-hidden">
+              <img
+                src={schoolSettings.logoUrl}
+                alt={`${schoolSettings.shortName || 'School'} Logo`}
+                className="w-full h-full object-contain"
+                onError={(e) => {
+                  (e.target as HTMLElement).style.display = 'none';
+                }}
+              />
+            </div>
+          ) : (
+            <div className="w-10 h-10 bg-amber-400 rounded-xl flex items-center justify-center font-black text-indigo-950 text-xl shadow-sm tracking-tight shrink-0">
+              {schoolSettings.shortName ? schoolSettings.shortName.charAt(0) : 'H'}
+            </div>
+          )}
+          <span className="font-bold text-white text-base sm:text-lg tracking-tight uppercase whitespace-nowrap truncate max-w-[260px] sm:max-w-none">
+            {schoolSettings.schoolName} <span className="text-indigo-950 font-sans font-black text-[10px] px-2 py-0.5 rounded-full bg-amber-400 uppercase tracking-widest ml-1 shadow-xs">{schoolSettings.shortName}</span>
           </span>
         </div>
 
-        {/* Navigation items: 5-7 items, single-line */}
-        <nav className="hidden lg:flex items-center gap-1.5 overflow-x-auto py-1">
+        {/* Navigation items: single-line with overflow */}
+        <nav className="hidden xl:flex items-center gap-1.5 overflow-x-auto py-1">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
@@ -124,7 +145,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
-                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all whitespace-nowrap shrink-0 relative ${
+                className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold transition-all whitespace-nowrap shrink-0 relative ${
                   isActive
                     ? 'bg-white/15 text-white shadow-xs border border-white/20'
                     : 'text-indigo-200 hover:text-white hover:bg-white/10'
@@ -180,8 +201,8 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
       </div>
 
-      {/* Mobile Nav Bar */}
-      <div className="lg:hidden flex items-center gap-1.5 px-3 py-2 overflow-x-auto border-t border-indigo-800 bg-indigo-950">
+      {/* Responsive Nav Bar for lg and below */}
+      <div className="xl:hidden flex items-center gap-1.5 px-3 py-2 overflow-x-auto border-t border-indigo-800 bg-indigo-950">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;

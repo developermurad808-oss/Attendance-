@@ -16,8 +16,9 @@ import {
   ArrowUpRight,
   Sparkles
 } from 'lucide-react';
-import { Student, Staff, AttendanceRecord, PayrollRecord, NotificationLog } from '../types';
+import { Student, Staff, AttendanceRecord, PayrollRecord, NotificationLog, SchoolSettings } from '../types';
 import { formatNaira, downloadCSV } from '../utils/audio';
+import { AttendanceStatusPieChart } from './AttendanceStatusPieChart';
 
 interface LeadershipDashboardProps {
   students: Student[];
@@ -25,6 +26,7 @@ interface LeadershipDashboardProps {
   attendanceRecords: AttendanceRecord[];
   payrollRecords: PayrollRecord[];
   notificationLogs: NotificationLog[];
+  schoolSettings?: SchoolSettings;
   onTriggerDirectNotification: (student: Student, type: 'absence' | 'late') => void;
   onNavigateTab: (tab: string) => void;
 }
@@ -35,6 +37,7 @@ export const LeadershipDashboard: React.FC<LeadershipDashboardProps> = ({
   attendanceRecords,
   payrollRecords,
   notificationLogs,
+  schoolSettings,
   onTriggerDirectNotification,
   onNavigateTab,
 }) => {
@@ -113,26 +116,41 @@ export const LeadershipDashboard: React.FC<LeadershipDashboardProps> = ({
       <div className="bg-gradient-to-r from-indigo-900 via-indigo-850 to-indigo-800 text-white border border-indigo-700/50 rounded-2xl p-6 shadow-md relative overflow-hidden">
         <div className="absolute top-0 right-0 w-96 h-full bg-gradient-to-l from-amber-400/10 to-transparent pointer-events-none" />
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
-          <div>
-            <div className="flex items-center gap-2 text-xs font-bold text-amber-400 uppercase tracking-widest mb-1.5">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Executive Briefing & Real-Time Campus Operations</span>
+          <div className="flex items-start gap-4">
+            {schoolSettings?.logoUrl ? (
+              <div className="w-14 h-14 rounded-2xl bg-white/10 p-1 flex items-center justify-center border border-white/20 shadow-md shrink-0 overflow-hidden">
+                <img
+                  src={schoolSettings.logoUrl}
+                  alt="School Crest"
+                  className="w-full h-full object-contain"
+                />
+              </div>
+            ) : (
+              <div className="w-14 h-14 rounded-2xl bg-amber-400 text-indigo-950 font-black text-2xl flex items-center justify-center shrink-0 shadow-md">
+                {schoolSettings?.shortName ? schoolSettings.shortName.charAt(0) : 'H'}
+              </div>
+            )}
+            <div>
+              <div className="flex items-center gap-2 text-xs font-bold text-amber-400 uppercase tracking-widest mb-1">
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Executive Briefing & Real-Time Campus Operations</span>
+              </div>
+              <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white">
+                {schoolSettings?.schoolName || 'Heritage of Excellence Abuja'} — Operational Dashboard
+              </h1>
+              <p className="text-xs sm:text-sm text-indigo-200 mt-1 max-w-2xl leading-relaxed">
+                Real-time monitoring of student gate check-ins, staff clock-in compliance, automatic parent push notifications, and month-to-date payroll disbursement ({schoolSettings?.academicSession || '2026/2027'}).
+              </p>
             </div>
-            <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white">
-              Heritage of Excellence Abuja — Operational Dashboard
-            </h1>
-            <p className="text-xs sm:text-sm text-indigo-200 mt-1 max-w-2xl leading-relaxed">
-              Real-time monitoring of student gate check-ins, staff clock-in compliance, automatic parent push notifications, and month-to-date payroll disbursement.
-            </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5">
             <button
-              onClick={handleExportDailyReport}
+              onClick={() => onNavigateTab('export')}
               className="flex items-center gap-2 px-4 py-2.5 bg-white/10 hover:bg-white/20 text-white border border-white/20 rounded-xl text-xs font-bold transition-all shadow-xs"
             >
               <Download className="w-4 h-4 text-amber-400" />
-              <span>Export Register (CSV)</span>
+              <span>Data Export & Storage</span>
             </button>
             <button
               onClick={() => onNavigateTab('scanner')}
@@ -259,6 +277,12 @@ export const LeadershipDashboard: React.FC<LeadershipDashboardProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Proportional Attendance Status Breakdown by Class Section (Pie / Donut Chart) */}
+      <AttendanceStatusPieChart
+        students={students}
+        attendanceRecords={attendanceRecords}
+      />
 
       {/* Main Grid: Live Gate Stream & Absentee Alert Center */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
